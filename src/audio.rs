@@ -5,7 +5,11 @@ use embassy_rp::{
 use embassy_time::Timer;
 
 fn calc_note(freq: f32) -> u16 {
-    (12_000_000 as f32 / freq) as u16
+    //Lower but sounds less like the note
+    // (embassy_rp::clocks::clk_sys_freq() as f32 / (freq * 1f32)) as u16
+
+    //Higher but sounds more like the note
+    (12_000_000 as f32 / (freq * 1f32)) as u16
 }
 
 #[derive(Clone, Copy)]
@@ -59,12 +63,13 @@ impl<'d> Audio<'d> {
         Audio { pwm }
     }
 
+    /// *Warning* The buzzer is loud and high pitched. Still working on volume control
     pub async fn play(&mut self, note: Notes) {
         let note = note.note();
         let mut c = Config::default();
-        c.compare_b = 573;
+        c.compare_b = 500;
         c.top = note;
-        // c.divider = FixedU16::from_bits(2);
+
         self.pwm.set_config(&c);
         let _ = self.pwm.set_duty_cycle_percent(50);
 
