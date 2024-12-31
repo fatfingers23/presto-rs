@@ -1,15 +1,18 @@
 #![allow(non_snake_case)]
 
+use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
+use embassy_executor::Spawner;
 pub use embassy_rp::peripherals::*;
 use embassy_rp::{
     // Peripheral,
     config::Config,
-    // gpio::{AnyPin, Input, Level, Output, Pull},
-    // pwm::{ChannelAPin, Pwm, SetDutyCycle, Slice},
+    gpio::{Level, Output},
+    pio::Pio, // gpio::{AnyPin, Input, Level, Output, Pull},
+              // pwm::{ChannelAPin, Pwm, SetDutyCycle, Slice},
 };
 // use embassy_time;
 
-use crate::leds::Leds;
+use crate::{Irqs, cyw43_driver::setup_cyw43, leds::Leds};
 
 #[allow(dead_code)]
 pub struct Peripherals {
@@ -44,8 +47,8 @@ pub struct Peripherals {
     pub I2C0: I2C0,
     pub I2C1: I2C1,
 
-    pub DMA_CH0: DMA_CH0,
-    pub DMA_CH1: DMA_CH1,
+    // pub DMA_CH0: DMA_CH0,
+    // pub DMA_CH1: DMA_CH1,
     pub DMA_CH2: DMA_CH2,
     // pub DMA_CH3: DMA_CH3,
     pub DMA_CH4: DMA_CH4,
@@ -84,7 +87,7 @@ pub struct Peripherals {
 
     pub CORE1: CORE1,
 
-    pub PIO0: PIO0,
+    // pub PIO0: PIO0,
     // pub PIO1: PIO1,
     pub PIO2: PIO2,
 
@@ -93,11 +96,33 @@ pub struct Peripherals {
 
     pub TRNG: TRNG,
     //Hey Presto
-    pub LEDS: Leds,
+    pub LEDS: Leds<'static>,
 }
 
-pub fn init(config: Config) -> Peripherals {
+pub async fn init(config: Config, spawner: Spawner) -> Peripherals {
     let p = embassy_rp::init(config);
+    // let mut pio = Pio::new(p.PIO1, Irqs);
+    let Pio {
+        mut common,
+        sm0,
+        sm1,
+        irq0,
+        ..
+    } = Pio::new(p.PIO0, Irqs);
+
+    let (net_device, mut control) = setup_cyw43(
+        &mut common,
+        sm1,
+        irq0,
+        p.PIN_23,
+        p.PIN_24,
+        p.PIN_25,
+        p.PIN_29,
+        p.DMA_CH1,
+        spawner,
+    )
+    .await;
+
     Peripherals {
         PIN_0: p.PIN_0,
         PIN_1: p.PIN_1,
@@ -130,8 +155,8 @@ pub fn init(config: Config) -> Peripherals {
         I2C0: p.I2C0,
         I2C1: p.I2C1,
 
-        DMA_CH0: p.DMA_CH0,
-        DMA_CH1: p.DMA_CH1,
+        // DMA_CH0: p.DMA_CH0,
+        // DMA_CH1: p.DMA_CH1,
         DMA_CH2: p.DMA_CH2,
         // DMA_CH3: p.DMA_CH3,
         DMA_CH4: p.DMA_CH4,
@@ -170,7 +195,7 @@ pub fn init(config: Config) -> Peripherals {
 
         CORE1: p.CORE1,
 
-        PIO0: p.PIO0,
+        // PIO0: p.PIO0,
         // PIO1: p.PIO1,
         PIO2: p.PIO2,
 
@@ -179,6 +204,6 @@ pub fn init(config: Config) -> Peripherals {
 
         TRNG: p.TRNG,
         //Hey Presto
-        LEDS: Leds::new(p.PIO1, p.DMA_CH3, p.PIN_33),
+        LEDS: Leds::new(&mut common, sm0, p.DMA_CH3, p.PIN_33),
     }
 }

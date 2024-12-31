@@ -1,29 +1,31 @@
 use embassy_rp::{
-    peripherals::{DMA_CH3, PIN_33, PIO1},
-    pio::Pio,
+    peripherals::{DMA_CH3, PIN_33, PIO0},
+    pio::{Common, StateMachine},
     pio_programs::ws2812::{PioWs2812, PioWs2812Program},
 };
 use smart_leds::RGB8;
 
-use crate::Irqs;
-
-pub struct Leds {
-    pub ws2812: PioWs2812<'static, PIO1, 0, 7>,
+pub struct Leds<'d> {
+    pub ws2812: PioWs2812<'d, PIO0, 0, 7>,
     pub lights: [RGB8; 7],
 }
 
 //TODO write documentation
-impl Leds {
-    pub fn new(pio: PIO1, dma: DMA_CH3, pin: PIN_33) -> Self {
-        let Pio {
-            mut common, sm0, ..
-        } = Pio::new(pio, Irqs);
+impl<'d> Leds<'d> {
+    pub fn new(
+        mut common: &mut Common<'d, PIO0>,
+        sm0: StateMachine<'d, PIO0, 0>,
+        dma: DMA_CH3,
+        pin: PIN_33,
+    ) -> Self {
+        // let Pio {
+        //     mut common, sm0, ..
+        // } = Pio::new(pio, Irqs);
 
         const NUM_LEDS: usize = 7;
 
-        let program = PioWs2812Program::new(&mut common);
-        let ws2812: PioWs2812<'static, PIO1, 0, 7> =
-            PioWs2812::new(&mut common, sm0, dma, pin, &program);
+        let program = PioWs2812Program::new(common);
+        let ws2812 = PioWs2812::new(&mut common, sm0, dma, pin, &program);
         Self {
             ws2812,
             lights: [RGB8::default(); NUM_LEDS],

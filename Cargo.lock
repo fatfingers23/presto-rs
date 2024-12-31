@@ -336,7 +336,9 @@ name = "embassy-executor"
 version = "0.7.0"
 source = "git+https://github.com/embassy-rs/embassy?rev=a4f8fddd696ca2e3705827ba4b3806cbadcb3134#a4f8fddd696ca2e3705827ba4b3806cbadcb3134"
 dependencies = [
+ "cortex-m",
  "critical-section",
+ "defmt",
  "document-features",
  "embassy-executor-macros",
 ]
@@ -369,9 +371,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "embassy-net"
+version = "0.5.0"
+source = "git+https://github.com/embassy-rs/embassy?rev=a4f8fddd696ca2e3705827ba4b3806cbadcb3134#a4f8fddd696ca2e3705827ba4b3806cbadcb3134"
+dependencies = [
+ "defmt",
+ "document-features",
+ "embassy-net-driver",
+ "embassy-sync",
+ "embassy-time",
+ "embedded-io-async",
+ "embedded-nal-async",
+ "heapless",
+ "managed",
+ "smoltcp",
+]
+
+[[package]]
 name = "embassy-net-driver"
 version = "0.2.0"
 source = "git+https://github.com/embassy-rs/embassy?rev=a4f8fddd696ca2e3705827ba4b3806cbadcb3134#a4f8fddd696ca2e3705827ba4b3806cbadcb3134"
+dependencies = [
+ "defmt",
+]
 
 [[package]]
 name = "embassy-net-driver-channel"
@@ -381,6 +403,19 @@ dependencies = [
  "embassy-futures",
  "embassy-net-driver",
  "embassy-sync",
+]
+
+[[package]]
+name = "embassy-net-wiznet"
+version = "0.1.0"
+source = "git+https://github.com/embassy-rs/embassy?rev=a4f8fddd696ca2e3705827ba4b3806cbadcb3134#a4f8fddd696ca2e3705827ba4b3806cbadcb3134"
+dependencies = [
+ "defmt",
+ "embassy-futures",
+ "embassy-net-driver-channel",
+ "embassy-time",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
 ]
 
 [[package]]
@@ -525,6 +560,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ff09972d4073aa8c299395be75161d582e7629cd663171d62af73c8d50dba3f"
 dependencies = [
  "embedded-io",
+]
+
+[[package]]
+name = "embedded-nal"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c56a28be191a992f28f178ec338a0bf02f63d7803244add736d026a471e6ed77"
+dependencies = [
+ "nb 1.1.0",
+]
+
+[[package]]
+name = "embedded-nal-async"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76959917cd2b86f40a98c28dd5624eddd1fa69d746241c8257eac428d83cb211"
+dependencies = [
+ "embedded-io-async",
+ "embedded-nal",
 ]
 
 [[package]]
@@ -696,6 +750,7 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad"
 dependencies = [
+ "defmt",
  "hash32",
  "stable_deref_trait",
 ]
@@ -810,6 +865,12 @@ name = "log"
 version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
+
+[[package]]
+name = "managed"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ca88d725a0a943b096803bd34e73a4437208b6077654cc4ecb2947a5f91618d"
 
 [[package]]
 name = "memchr"
@@ -974,6 +1035,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "portable-atomic"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "280dc24453071f1b63954171985a0b0d30058d287960968b9b2aca264c8d4ee6"
+
+[[package]]
 name = "precomputed-hash"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -986,9 +1053,13 @@ dependencies = [
  "critical-section",
  "cyw43",
  "cyw43-pio",
+ "embassy-executor",
+ "embassy-net",
+ "embassy-net-wiznet",
  "embassy-rp",
  "embassy-time",
  "smart-leds",
+ "static_cell",
 ]
 
 [[package]]
@@ -1222,10 +1293,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "smoltcp"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dad095989c1533c1c266d9b1e8d70a1329dd3723c3edac6d03bbd67e7bf6f4bb"
+dependencies = [
+ "bitflags 1.3.2",
+ "byteorder",
+ "cfg-if",
+ "defmt",
+ "heapless",
+ "managed",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
+name = "static_cell"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d89b0684884a883431282db1e4343f34afc2ff6996fe1f4a1664519b66e14c1e"
+dependencies = [
+ "portable-atomic",
+]
 
 [[package]]
 name = "string_cache"
