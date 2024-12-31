@@ -1,5 +1,5 @@
 use embassy_rp::{
-    peripherals::{DMA_CH3, PIN_33, PIO0},
+    peripherals::{DMA_CH0, PIN_33, PIO0},
     pio::{Common, StateMachine},
     pio_programs::ws2812::{PioWs2812, PioWs2812Program},
 };
@@ -15,7 +15,7 @@ impl<'d> Leds<'d> {
     pub fn new(
         mut common: &mut Common<'d, PIO0>,
         sm0: StateMachine<'d, PIO0, 0>,
-        dma: DMA_CH3,
+        dma: DMA_CH0,
         pin: PIN_33,
     ) -> Self {
         // let Pio {
