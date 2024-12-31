@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
-use crate::{Irqs, leds::Leds};
-use embassy_executor::Spawner;
+use crate::{Irqs, audio::Audio, leds::Leds};
 pub use embassy_rp::peripherals::*;
 use embassy_rp::{config::Config, pio::Pio};
 
@@ -70,7 +69,7 @@ pub struct Peripherals {
     pub PWM_SLICE5: PWM_SLICE5,
     pub PWM_SLICE7: PWM_SLICE7,
     pub PWM_SLICE8: PWM_SLICE8,
-    pub PWM_SLICE9: PWM_SLICE9,
+    // pub PWM_SLICE9: PWM_SLICE9,
     pub PWM_SLICE10: PWM_SLICE10,
     pub PWM_SLICE11: PWM_SLICE11,
 
@@ -96,17 +95,14 @@ pub struct Peripherals {
     pub TRNG: TRNG,
     //Hey Presto
     pub LEDS: Leds<'static>,
+    pub BUZZER: Audio<'static>,
 }
 
 pub async fn init(config: Config) -> Peripherals {
     let p = embassy_rp::init(config);
-    // let mut pio = Pio::new(p.PIO1, Irqs);
+
     let Pio {
-        mut common,
-        sm0,
-        sm1,
-        irq0,
-        ..
+        mut common, sm0, ..
     } = Pio::new(p.PIO0, Irqs);
 
     // control.start_ap_open("test", 4).await;
@@ -173,7 +169,7 @@ pub async fn init(config: Config) -> Peripherals {
         PWM_SLICE5: p.PWM_SLICE5,
         PWM_SLICE7: p.PWM_SLICE7,
         PWM_SLICE8: p.PWM_SLICE8,
-        PWM_SLICE9: p.PWM_SLICE9,
+        // PWM_SLICE9: p.PWM_SLICE9,
         PWM_SLICE10: p.PWM_SLICE10,
         PWM_SLICE11: p.PWM_SLICE11,
 
@@ -199,5 +195,6 @@ pub async fn init(config: Config) -> Peripherals {
         TRNG: p.TRNG,
         //Hey Presto
         LEDS: Leds::new(&mut common, sm0, p.DMA_CH0, p.PIN_33),
+        BUZZER: Audio::new(p.PWM_SLICE9, p.PIN_43),
     }
 }

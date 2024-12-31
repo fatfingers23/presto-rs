@@ -1058,6 +1058,7 @@ dependencies = [
  "embassy-net-wiznet",
  "embassy-rp",
  "embassy-time",
+ "fixed",
  "smart-leds",
  "static_cell",
 ]

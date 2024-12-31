@@ -6,6 +6,7 @@ use embassy_rp::{
     pio::InterruptHandler,
 };
 
+pub mod audio;
 pub mod leds;
 pub mod peripherals;
 pub mod rm2_driver;

@@ -37,6 +37,7 @@ embassy-time = { version = "0.4.0", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }
+fixed = "1.28.0"
 smart-leds = "0.4.0"
 static_cell = "2.1"
 
