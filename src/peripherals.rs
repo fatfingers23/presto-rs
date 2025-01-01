@@ -119,11 +119,6 @@ pub async fn init(config: Config) -> Peripherals {
     // Output::new(p.PIN_45, Level::Low);
     let mut display = ST7701::new(p.PIN_45, p.PWM_SLICE10);
 
-    display.set_backlight(100).await;
-    // for i in 0..100 {
-    //     test.set_backlight(i);
-    //     Timer::after_millis(2000).await;
-    // }
     // test.set_backlight(1);
 
     Peripherals {

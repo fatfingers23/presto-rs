@@ -7,6 +7,7 @@ use embassy_rp::{
 };
 
 pub mod audio;
+pub mod io;
 pub mod leds;
 pub mod peripherals;
 pub mod rm2_driver;
