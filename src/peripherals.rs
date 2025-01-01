@@ -1,7 +1,17 @@
 #![allow(non_snake_case)]
-use crate::{Irqs, audio::Audio, leds::Leds};
+use crate::{
+    Irqs,
+    audio::Audio,
+    leds::Leds,
+    st7701::{self, ST7701},
+};
 pub use embassy_rp::peripherals::*;
-use embassy_rp::{config::Config, pio::Pio};
+use embassy_rp::{
+    config::Config,
+    gpio::{Level, Output},
+    pio::Pio,
+};
+use embassy_time::Timer;
 
 #[allow(dead_code)]
 pub struct Peripherals {
@@ -70,7 +80,7 @@ pub struct Peripherals {
     pub PWM_SLICE7: PWM_SLICE7,
     pub PWM_SLICE8: PWM_SLICE8,
     // pub PWM_SLICE9: PWM_SLICE9,
-    pub PWM_SLICE10: PWM_SLICE10,
+    // pub PWM_SLICE10: PWM_SLICE10,
     pub PWM_SLICE11: PWM_SLICE11,
 
     pub USB: USB,
@@ -96,6 +106,7 @@ pub struct Peripherals {
     //Hey Presto
     pub LEDS: Leds<'static>,
     pub BUZZER: Audio<'static>,
+    pub ST7701: ST7701,
 }
 
 pub async fn init(config: Config) -> Peripherals {
@@ -105,7 +116,16 @@ pub async fn init(config: Config) -> Peripherals {
         mut common, sm0, ..
     } = Pio::new(p.PIO0, Irqs);
 
-    // control.start_ap_open("test", 4).await;
+    // Output::new(p.PIN_45, Level::Low);
+    let mut display = ST7701::new(p.PIN_45, p.PWM_SLICE10);
+
+    display.set_backlight(100).await;
+    // for i in 0..100 {
+    //     test.set_backlight(i);
+    //     Timer::after_millis(2000).await;
+    // }
+    // test.set_backlight(1);
+
     Peripherals {
         PIN_0: p.PIN_0,
         PIN_1: p.PIN_1,
@@ -170,7 +190,7 @@ pub async fn init(config: Config) -> Peripherals {
         PWM_SLICE7: p.PWM_SLICE7,
         PWM_SLICE8: p.PWM_SLICE8,
         // PWM_SLICE9: p.PWM_SLICE9,
-        PWM_SLICE10: p.PWM_SLICE10,
+        // PWM_SLICE10: p.PWM_SLICE10,
         PWM_SLICE11: p.PWM_SLICE11,
 
         USB: p.USB,
@@ -196,5 +216,6 @@ pub async fn init(config: Config) -> Peripherals {
         //Hey Presto
         LEDS: Leds::new(&mut common, sm0, p.DMA_CH0, p.PIN_33),
         BUZZER: Audio::new(p.PWM_SLICE9, p.PIN_43),
+        ST7701: display,
     }
 }

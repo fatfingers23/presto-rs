@@ -10,6 +10,7 @@ pub mod audio;
 pub mod leds;
 pub mod peripherals;
 pub mod rm2_driver;
+mod st7701;
 
 bind_interrupts!(pub struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
