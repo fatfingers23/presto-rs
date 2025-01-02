@@ -1,17 +1,15 @@
 #![allow(non_snake_case)]
-use crate::{
-    Irqs,
-    audio::Audio,
-    leds::Leds,
-    st7701::{self, ST7701},
-};
+use crate::{Irqs, audio::Audio, leds::Leds, st7701::ST7701};
 pub use embassy_rp::peripherals::*;
 use embassy_rp::{
     config::Config,
     gpio::{Level, Output},
     pio::Pio,
+    spi::{self, Spi},
 };
-use embassy_time::Timer;
+use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
+use static_cell::StaticCell;
+type Spi1Bus = Mutex<NoopRawMutex, Spi<'static, SPI1, spi::Async>>;
 
 #[allow(dead_code)]
 pub struct Peripherals {
@@ -31,9 +29,8 @@ pub struct Peripherals {
     pub PIN_25: PIN_25,
     pub PIN_29: PIN_29,
 
-    pub PIN_27: PIN_27,
-    pub PIN_28: PIN_28,
-
+    // pub PIN_27: PIN_27,
+    // pub PIN_28: PIN_28,
     pub PIN_40: PIN_40,
     pub PIN_41: PIN_41,
 
@@ -48,15 +45,14 @@ pub struct Peripherals {
     pub UART1: UART1,
 
     pub SPI0: SPI0,
-    pub SPI1: SPI1,
-
+    // pub SPI1: SPI1,
     pub I2C0: I2C0,
     pub I2C1: I2C1,
 
     //DMA channel for the RM2
     pub DMA_CH1: DMA_CH1,
 
-    pub DMA_CH2: DMA_CH2,
+    // pub DMA_CH2: DMA_CH2,
     pub DMA_CH3: DMA_CH3,
     pub DMA_CH4: DMA_CH4,
     pub DMA_CH5: DMA_CH5,
@@ -112,15 +108,29 @@ pub struct Peripherals {
 pub async fn init(config: Config) -> Peripherals {
     let p = embassy_rp::init(config);
 
+    //Setup a shared PIO instance for the LEDS, may be used elsewhere later
+    //TODO test if sharing will work with the CYW43 driver I had failures before because I was not passing
+    //The object to the parent application
     let Pio {
         mut common, sm0, ..
     } = Pio::new(p.PIO0, Irqs);
 
-    // Output::new(p.PIN_45, Level::Low);
-    let mut display = ST7701::new(p.PIN_45, p.PWM_SLICE10);
+    //Setup display SPI
+    let lcd_clk = p.PIN_26;
+    let lcd_cs = p.PIN_28;
+    let lcd_dat = p.PIN_27;
 
-    // test.set_backlight(1);
+    let mut config = spi::Config::default();
+    config.frequency = 8_000_000;
+    let spi: Spi<'_, SPI1, spi::Async> =
+        Spi::new_txonly(p.SPI1, lcd_clk, lcd_dat, p.DMA_CH2, config.clone());
+    let cs = Output::new(lcd_cs, Level::High);
+    static SPI_BUS: StaticCell<Spi1Bus> = StaticCell::new();
 
+    let spi_bus = SPI_BUS.init(Mutex::new(spi));
+    let mut display = ST7701::new(p.PIN_45, p.PWM_SLICE10, spi_bus, cs);
+    display.init().await;
+    display.set_backlight(100);
     Peripherals {
         PIN_0: p.PIN_0,
         PIN_1: p.PIN_1,
@@ -137,9 +147,8 @@ pub async fn init(config: Config) -> Peripherals {
         PIN_25: p.PIN_25,
         PIN_29: p.PIN_29,
 
-        PIN_27: p.PIN_27,
-        PIN_28: p.PIN_28,
-
+        // PIN_27: p.PIN_27,
+        // PIN_28: p.PIN_28,
         PIN_40: p.PIN_40,
         PIN_41: p.PIN_41,
 
@@ -154,14 +163,13 @@ pub async fn init(config: Config) -> Peripherals {
         UART1: p.UART1,
 
         SPI0: p.SPI0,
-        SPI1: p.SPI1,
-
+        // SPI1: p.SPI1,
         I2C0: p.I2C0,
         I2C1: p.I2C1,
 
         // DMA_CH0: p.DMA_CH0,
         DMA_CH1: p.DMA_CH1,
-        DMA_CH2: p.DMA_CH2,
+        // DMA_CH2: p.DMA_CH2,
         DMA_CH3: p.DMA_CH3,
         DMA_CH4: p.DMA_CH4,
         DMA_CH5: p.DMA_CH5,
