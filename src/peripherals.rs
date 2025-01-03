@@ -45,7 +45,7 @@ pub struct Peripherals {
     pub DMA_CH1: DMA_CH1,
 
     // pub DMA_CH2: DMA_CH2,
-    pub DMA_CH3: DMA_CH3,
+    // pub DMA_CH3: DMA_CH3,
     pub DMA_CH4: DMA_CH4,
     pub DMA_CH5: DMA_CH5,
     pub DMA_CH6: DMA_CH6,
@@ -147,7 +147,9 @@ pub async fn init(config: Config) -> Peripherals {
         spi_bus,
         cs,
         p.PIO2,
-    );
+        p.DMA_CH3,
+    )
+    .await;
     display.init().await;
 
     Peripherals {
@@ -182,7 +184,7 @@ pub async fn init(config: Config) -> Peripherals {
         // DMA_CH0: p.DMA_CH0,
         DMA_CH1: p.DMA_CH1,
         // DMA_CH2: p.DMA_CH2,
-        DMA_CH3: p.DMA_CH3,
+        // DMA_CH3: p.DMA_CH3,
         DMA_CH4: p.DMA_CH4,
         DMA_CH5: p.DMA_CH5,
         DMA_CH6: p.DMA_CH6,

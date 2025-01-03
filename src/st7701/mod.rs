@@ -2,7 +2,6 @@
 /// and the embassy framework
 use byte_slice_cast::AsByteSlice;
 use commands::LcdCommand;
-use cyw43::State;
 use embassy_rp::{
     gpio::{Level, Output},
     peripherals::*,
@@ -12,8 +11,7 @@ use embassy_rp::{
 };
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
 use embassy_time::{Duration, Timer};
-use fixed::{traits::ToFixed, types::U56F8};
-use pio_proc::pio_file;
+use fixed::traits::ToFixed;
 
 use crate::Irqs;
 
@@ -60,7 +58,7 @@ pub fn setup_backlight_pwm(lcd_bl: PIN_45, lcd_pwm_slice: PWM_SLICE10) -> Pwm<'s
 }
 
 impl ST7701 {
-    pub fn new(
+    pub async fn new(
         lcd_bl: PIN_45,
         //GPIO 1-16 are rgb data lines
         pin_1: PIN_1,
@@ -90,6 +88,7 @@ impl ST7701 {
         spi_bus: &'static mut Mutex<NoopRawMutex, Spi<'static, SPI1, Async>>,
         lcd_cs: Output<'static>,
         pio: PIO2,
+        dma_ch3: DMA_CH3,
     ) -> Self {
         let width = Width::W240;
         //Setup brightness pwm and turn it off asap as we setup the display.
@@ -99,11 +98,13 @@ impl ST7701 {
 
         let sys_clock = embassy_rp::clocks::clk_sys_freq();
 
+        // embassy_rp::pac::PIO2.irq()
         let Pio {
             mut common,
-            irq3,
+            mut irq3,
             mut sm0,
             sm1,
+            irq_flags,
             ..
         } = Pio::new(pio, Irqs);
 
@@ -171,7 +172,25 @@ impl ST7701 {
         sm0.tx().push((width.number() as u32 >> 1) - 1);
         sm0.set_enable(true);
 
+        // irq3();
+        embassy_rp::pac::PIO2.irq().write(|w| w.set_irq(1));
+
+        // irq3.wait().await;
+
+        // //240x240 buffer of the color pink in 16
+        // let mut data = [0u16; 240 * 240];
+        // for i in 0..240 * 240 {
+        //     data[i] = RawU16::from(Rgb565::BLUE).into_inner();
+        // }
+        // let mut dma_out_ref = dma_ch3.into_ref();
+        // let (_, tx) = sm0.rx_tx();
+
+        // // let result = tx.dma_push(dma_out_ref, &data).await;
+
         //Setup the Timing PIO program
+
+        //TODO for the interupts like timing wait and so on just going have to pass in the spawner
+        //and spawn tasks instead of a interrupt handler, this will prob work better anyway
 
         Self {
             pwm_backlight: pwm,
