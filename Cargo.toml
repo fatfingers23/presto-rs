@@ -42,6 +42,8 @@ embassy-time = { version = "0.4.0", features = [
 
 fixed = "1.28.0"
 libm = "0.2.11"
+pio = "0.2.1"
+pio-proc = "0.2.2"
 smart-leds = "0.4.0"
 static_cell = "2.1"
 

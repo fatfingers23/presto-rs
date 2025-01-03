@@ -2,21 +2,46 @@
 /// and the embassy framework
 use byte_slice_cast::AsByteSlice;
 use commands::LcdCommand;
+use cyw43::State;
 use embassy_rp::{
-    gpio::Output,
-    peripherals::{PIN_45, PWM_SLICE10, SPI1},
+    gpio::{Level, Output},
+    peripherals::*,
+    pio::{Common, Direction, Irq, Pio, StateMachine},
     pwm::{Config, Pwm, SetDutyCycle},
     spi::{Async, Spi},
 };
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
 use embassy_time::{Duration, Timer};
+use fixed::{traits::ToFixed, types::U56F8};
+use pio_proc::pio_file;
+
+use crate::Irqs;
 
 mod commands;
+
+#[derive(PartialEq)]
+pub enum Width {
+    W240,
+    W480,
+}
+
+impl Width {
+    pub fn number(&self) -> u16 {
+        match self {
+            Width::W240 => 240,
+            Width::W480 => 480,
+        }
+    }
+}
 
 pub struct ST7701 {
     pwm_backlight: Pwm<'static>,
     spi: &'static mut Mutex<NoopRawMutex, Spi<'static, SPI1, Async>>,
     cs: Output<'static>,
+    parallel_sm: StateMachine<'static, PIO2, 0>,
+    timing_sm: StateMachine<'static, PIO2, 1>,
+    common: Common<'static, PIO2>,
+    irq3: Irq<'static, PIO2, 3>,
 }
 
 pub fn setup_backlight_pwm(lcd_bl: PIN_45, lcd_pwm_slice: PWM_SLICE10) -> Pwm<'static> {
@@ -37,23 +62,134 @@ pub fn setup_backlight_pwm(lcd_bl: PIN_45, lcd_pwm_slice: PWM_SLICE10) -> Pwm<'s
 impl ST7701 {
     pub fn new(
         lcd_bl: PIN_45,
+        //GPIO 1-16 are rgb data lines
+        pin_1: PIN_1,
+        pin_2: PIN_2,
+        pin_3: PIN_3,
+        pin_4: PIN_4,
+        pin_5: PIN_5,
+        pin_6: PIN_6,
+        pin_7: PIN_7,
+        pin_8: PIN_8,
+        pin_9: PIN_9,
+        pin_10: PIN_10,
+        pin_11: PIN_11,
+        pin_12: PIN_12,
+        pin_13: PIN_13,
+        pin_14: PIN_14,
+        pin_15: PIN_15,
+        pin_16: PIN_16,
+        //GPIO 17 and 18 are just pulled low for now. Used for 18 bit mode
+        pin_17: PIN_17,
+        pin_18: PIN_18,
+        hsync: PIN_19,
+        vsync: PIN_20,
+        lcd_de: PIN_21,
+        lcd_dot_clk: PIN_22,
         lcd_pwm_slice: PWM_SLICE10,
         spi_bus: &'static mut Mutex<NoopRawMutex, Spi<'static, SPI1, Async>>,
         lcd_cs: Output<'static>,
+        pio: PIO2,
     ) -> Self {
+        let width = Width::W240;
         //Setup brightness pwm and turn it off asap as we setup the display.
         //By default it's lit up
         let mut pwm = setup_backlight_pwm(lcd_bl, lcd_pwm_slice);
         let _ = pwm.set_duty_cycle_percent(0);
 
+        let sys_clock = embassy_rp::clocks::clk_sys_freq();
+
+        let Pio {
+            mut common,
+            irq3,
+            mut sm0,
+            sm1,
+            ..
+        } = Pio::new(pio, Irqs);
+
+        //Pins setup
+        let hsync_pio = common.make_pio_pin(hsync);
+        let vsync_pio = common.make_pio_pin(vsync);
+        let lcd_de = common.make_pio_pin(lcd_de);
+        let lcd_dot_clk = common.make_pio_pin(lcd_dot_clk);
+
+        //Setup data pins
+
+        sm0.set_pin_dirs(Direction::Out, &[
+            //Data pins
+            &common.make_pio_pin(pin_1),
+            &common.make_pio_pin(pin_2),
+            &common.make_pio_pin(pin_3),
+            &common.make_pio_pin(pin_4),
+            &common.make_pio_pin(pin_5),
+            &common.make_pio_pin(pin_6),
+            &common.make_pio_pin(pin_7),
+            &common.make_pio_pin(pin_8),
+            &common.make_pio_pin(pin_9),
+            &common.make_pio_pin(pin_10),
+            &common.make_pio_pin(pin_11),
+            &common.make_pio_pin(pin_12),
+            &common.make_pio_pin(pin_13),
+            &common.make_pio_pin(pin_14),
+            &common.make_pio_pin(pin_15),
+            &common.make_pio_pin(pin_16),
+            //Other pins
+            &hsync_pio,
+            &vsync_pio,
+            &lcd_dot_clk,
+        ]);
+        //Pull 17 and 18 low for now
+        Output::new(pin_17, Level::Low);
+        Output::new(pin_18, Level::Low);
+
+        //Setup the Parallel PIO program
+        let parallel_program = pio_proc::pio_file!(
+            "src/st7701/pio/st7701_parallel.pio",
+            select_program("st7701_parallel"), // Optional if only one program in the file
+            options(max_program_size = 32)     // Optional, defaults to 32
+        );
+        let parallel_program = parallel_program.program;
+        let mut cfg = embassy_rp::pio::Config::default();
+
+        cfg.use_program(&common.load_program(&parallel_program), &[&lcd_de]);
+
+        let max_pio_clk = 34_000_000;
+        let clock_divider = (sys_clock + max_pio_clk - 1) / max_pio_clk;
+        if width == Width::W480 {
+            cfg.clock_divider = (clock_divider >> 1).to_fixed();
+        } else {
+            cfg.clock_divider = clock_divider.to_fixed();
+        }
+
+        sm0.set_config(&cfg);
+
+        let y_set = pio::InstructionOperands::OUT {
+            destination: pio::OutDestination::Y,
+            bit_count: 32,
+        };
+        unsafe { sm0.exec_instr(y_set.encode()) };
+        sm0.tx().push((width.number() as u32 >> 1) - 1);
+        sm0.set_enable(true);
+
+        //Setup the Timing PIO program
+
         Self {
             pwm_backlight: pwm,
             spi: spi_bus,
             cs: lcd_cs,
+            parallel_sm: sm0,
+            timing_sm: sm1,
+            common,
+            irq3,
         }
     }
 
     pub async fn init(&mut self) {
+        //Init display with the commands
+        self.init_spi_commands().await;
+    }
+
+    pub async fn init_spi_commands(&mut self) {
         // Software reset
         self.command(LcdCommand::SWRESET, None).await;
         Timer::after(Duration::from_millis(150)).await;
@@ -180,6 +316,7 @@ impl ST7701 {
         Timer::after(Duration::from_millis(120)).await;
         self.command(LcdCommand::DISPON, None).await;
         Timer::after(Duration::from_millis(50)).await;
+        self.set_backlight(100);
     }
 
     pub async fn command(&mut self, command: LcdCommand, data: Option<&[u8]>) {

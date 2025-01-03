@@ -14,14 +14,6 @@ type Spi1Bus = Mutex<NoopRawMutex, Spi<'static, SPI1, spi::Async>>;
 #[allow(dead_code)]
 pub struct Peripherals {
     pub PIN_0: PIN_0,
-    pub PIN_1: PIN_1,
-    pub PIN_3: PIN_3,
-    pub PIN_4: PIN_4,
-    pub PIN_5: PIN_5,
-    pub PIN_6: PIN_6,
-    pub PIN_7: PIN_7,
-    pub PIN_8: PIN_8,
-    pub PIN_9: PIN_9,
 
     //RM2 pins
     pub PIN_23: PIN_23,
@@ -93,8 +85,7 @@ pub struct Peripherals {
     // pub PIO0: PIO0,
     //RM2 PIO
     pub PIO1: PIO1,
-    pub PIO2: PIO2,
-
+    // pub PIO2: PIO2,
     pub WATCHDOG: WATCHDOG,
     pub BOOTSEL: BOOTSEL,
 
@@ -128,19 +119,40 @@ pub async fn init(config: Config) -> Peripherals {
     static SPI_BUS: StaticCell<Spi1Bus> = StaticCell::new();
 
     let spi_bus = SPI_BUS.init(Mutex::new(spi));
-    let mut display = ST7701::new(p.PIN_45, p.PWM_SLICE10, spi_bus, cs);
+    let mut display = ST7701::new(
+        p.PIN_45,
+        p.PIN_1,
+        p.PIN_2,
+        p.PIN_3,
+        p.PIN_4,
+        p.PIN_5,
+        p.PIN_6,
+        p.PIN_7,
+        p.PIN_8,
+        p.PIN_9,
+        p.PIN_10,
+        p.PIN_11,
+        p.PIN_12,
+        p.PIN_13,
+        p.PIN_14,
+        p.PIN_15,
+        p.PIN_16,
+        p.PIN_17,
+        p.PIN_18,
+        p.PIN_19,
+        p.PIN_20,
+        p.PIN_21,
+        p.PIN_22,
+        p.PWM_SLICE10,
+        spi_bus,
+        cs,
+        p.PIO2,
+    );
     display.init().await;
-    display.set_backlight(100);
+
     Peripherals {
         PIN_0: p.PIN_0,
-        PIN_1: p.PIN_1,
-        PIN_3: p.PIN_3,
-        PIN_4: p.PIN_4,
-        PIN_5: p.PIN_5,
-        PIN_6: p.PIN_6,
-        PIN_7: p.PIN_7,
-        PIN_8: p.PIN_8,
-        PIN_9: p.PIN_9,
+
         //RM2 pins
         PIN_23: p.PIN_23,
         PIN_24: p.PIN_24,
@@ -210,8 +222,7 @@ pub async fn init(config: Config) -> Peripherals {
         // PIO0: p.PIO0,
         //RM2 PIO
         PIO1: p.PIO1,
-        PIO2: p.PIO2,
-
+        // PIO2: p.PIO2,
         WATCHDOG: p.WATCHDOG,
         BOOTSEL: p.BOOTSEL,
 

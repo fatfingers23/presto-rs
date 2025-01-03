@@ -1075,6 +1075,8 @@ dependencies = [
  "embassy-time",
  "fixed",
  "libm",
+ "pio",
+ "pio-proc",
  "smart-leds",
  "static_cell",
 ]
